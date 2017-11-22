@@ -1,10 +1,10 @@
-#include <Wire.h>
+  #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <avr/pgmspace.h>
 #define buttonPinLOCK PIN_PD6
 #define buttonPinID PIN_PB3
-#define IDLENGTH 9
+#define IDLENGTH 10
 const char ID_0[] PROGMEM = "Aon";
 const char IDCODE_0[] PROGMEM = "1909";
 const char ID_1[] PROGMEM = "Benz";
@@ -23,11 +23,14 @@ const char ID_7[] PROGMEM = "W. Worachai";
 const char IDCODE_7[] PROGMEM = "5555";
 const char ID_8[] PROGMEM = "Nuty";
 const char IDCODE_8[] PROGMEM = "3782";
-const char* const ID[] PROGMEM = {ID_0, ID_1, ID_2, ID_3, ID_4, ID_5, ID_6, ID_7, ID_8};
-const char* const IDCODE[] PROGMEM = {IDCODE_0, IDCODE_1, IDCODE_2, IDCODE_3, IDCODE_4, IDCODE_5, IDCODE_6, IDCODE_7, IDCODE_8};
+const char ID_9[] PROGMEM = "Cheerana";
+const char IDCODE_9[] PROGMEM = "12";
+const char* const ID[] PROGMEM = {ID_0, ID_1, ID_2, ID_3, ID_4, ID_5, ID_6, ID_7, ID_8, ID_9};
+const char* const IDCODE[] PROGMEM = {IDCODE_0, IDCODE_1, IDCODE_2, IDCODE_3, IDCODE_4, IDCODE_5, IDCODE_6, IDCODE_7, IDCODE_8, IDCODE_9};
 char buffer[30];
 String thisID = "";
-String OTP = String(random(1000, 999999));
+//String OTP = String(random(1000,99999));
+char OTP[10];
 String thisPWD = "";
 bool lockState = false;
 bool haveID = false;
@@ -68,6 +71,15 @@ int index(String key)
   return -1;
 }
 
+String getOTP()
+{
+  char OTP[7];
+  int OTP_length = random(4,6);
+  for(int i = 0;i < OTP_length ; i++)
+    OTP[i] = (char)(random(0,9)+48);
+  return String(OTP);
+}
+
 void printLockState(bool lockState)
 {
   if (lockState)
@@ -93,6 +105,7 @@ void printLockState(bool lockState)
 
 void setup() {
   // put your setup code here, to run once:
+  pinMode(PIN_PB5, OUTPUT);
   lcd.setBacklightPin(3, POSITIVE);
   lcd.setBacklight(HIGH);
   lcd.begin(16, 2); // Set up the lcd to have 16 char on 2 lines
@@ -115,7 +128,11 @@ void setup() {
   printLockState(lockState);
   lcd.setCursor(0, 0);
   lcd.print("ID: ");
-  OTP = "12345";
+//  OTP = "1";
+  digitalWrite(PIN_PB5, HIGH);
+  Serial.begin(9600);
+//  delay(1000);
+//  Serial.println("Device started...");
 }
 
 void loop() {
@@ -138,6 +155,9 @@ void loop() {
       lcd.setCursor(0, 0);
       if (index(thisID) != -1)
       {
+//        OTP = String(random(1000,99999));
+//        OTP = getOTP();
+        strcpy(OTP,"1234");
         lcd.print("ID found");
         printLockState(lockState);
         lcd.clear();
@@ -147,6 +167,7 @@ void loop() {
         lcd.print(String(buffer).substring(0, 7));
         printLockState(lockState);
         haveID = true;
+        Serial.println(OTP);
         delay(1000);
       }
       else
@@ -182,6 +203,14 @@ void loop() {
         lcd.clear();
         lockState = not lockState;
         lcd.print("Success");
+        if (lockState)
+        {
+          digitalWrite(PIN_PB5, LOW);
+        }
+        else
+        {
+          digitalWrite(PIN_PB5, HIGH);
+        }
         delay(1000);
         haveID = false;
         lcd.clear();
