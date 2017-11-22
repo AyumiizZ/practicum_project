@@ -1,4 +1,4 @@
-  #include <Wire.h>
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <avr/pgmspace.h>
@@ -28,21 +28,20 @@ const char IDCODE_9[] PROGMEM = "12";
 const char* const ID[] PROGMEM = {ID_0, ID_1, ID_2, ID_3, ID_4, ID_5, ID_6, ID_7, ID_8, ID_9};
 const char* const IDCODE[] PROGMEM = {IDCODE_0, IDCODE_1, IDCODE_2, IDCODE_3, IDCODE_4, IDCODE_5, IDCODE_6, IDCODE_7, IDCODE_8, IDCODE_9};
 char buffer[30];
-String thisID = "";
-//String OTP = String(random(1000,99999));
-char OTP[10];
-String thisPWD = "";
+char thisID[11];
+char OTP[7];
+char thisPWD[11];
 bool lockState = false;
 bool haveID = false;
-byte lock00[8] = {B00000, B00000, B00000, B00011, B00100, B01000, B01000, B01000};
-byte lock01[8] = {B00000, B00000, B00000, B11000, B00100, B00010, B00010, B00010};
-byte unlock00[8] = {B00011, B00100, B01000, B01000, B01000, B00000, B00000, B00000};
-byte unlock01[8] = {B11000, B00100, B00010, B00010, B00010, B00010, B00010, B00010};
-byte lock10[8] = {B11111, B10000, B10000, B10011, B10001, B10001, B10000, B11111};
-byte lock11[8] = {B11111, B00001, B00001, B11001, B10001, B10001, B00001, B11111};
-int c = 0;
-const byte ROWS = 4; //four rows
-const byte COLS = 3; //three columns
+uint8_t lock00[8] = {B00000, B00000, B00000, B00011, B00100, B01000, B01000, B01000};
+uint8_t lock01[8] = {B00000, B00000, B00000, B11000, B00100, B00010, B00010, B00010};
+uint8_t unlock00[8] = {B00011, B00100, B01000, B01000, B01000, B00000, B00000, B00000};
+uint8_t unlock01[8] = {B11000, B00100, B00010, B00010, B00010, B00010, B00010, B00010};
+uint8_t lock10[8] = {B11111, B10000, B10000, B10011, B10001, B10001, B10000, B11111};
+uint8_t lock11[8] = {B11111, B00001, B00001, B11001, B10001, B10001, B00001, B11111};
+uint8_t c = 0;
+const uint8_t ROWS = 4; //four rows
+const uint8_t COLS = 3; //three columns
 char key = NO_KEY;
 char keys[ROWS][COLS] = {
   {'1', '2', '3'},
@@ -50,34 +49,29 @@ char keys[ROWS][COLS] = {
   {'7', '8', '9'},
   {'*', '0', '#'}
 };
-byte rowPins[ROWS] = {PIN_PB0, PIN_PB1, PIN_PB2, PIN_PB3}; //connect to the row pinouts of the keypad
-byte colPins[COLS] = {PIN_PC2, PIN_PC1, PIN_PC0}; //connect to the column pinouts of the keypad
-int testRun = -1;
+uint8_t rowPins[ROWS] = {PIN_PB0, PIN_PB1, PIN_PB2, PIN_PB3}; //connect to the row pinouts of the keypad
+uint8_t colPins[COLS] = {PIN_PC2, PIN_PC1, PIN_PC0}; //connect to the column pinouts of the keypad
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7);
-int index(String key)
+int index(char key[])
 {
-  if (key.length() == 0)
-    return -1;
   for (int i = 0; i < IDLENGTH; i++)
   {
     strcpy_P(buffer, (char*)pgm_read_word(&(IDCODE[i])));
-    if ( key == buffer)
+    if (strcmp(key, buffer) == 0)
     {
-
       return i;
     }
   }
   return -1;
 }
 
-String getOTP()
+char getOTP()
 {
-  char OTP[7];
-  int OTP_length = random(4,6);
-  for(int i = 0;i < OTP_length ; i++)
-    OTP[i] = (char)(random(0,9)+48);
-  return String(OTP);
+  int OTP_length = random(4, 6);
+  for (int i = 0; i < OTP_length ; i++)
+    OTP[i] = (char)(random(0, 9) + 48);
+
 }
 
 void printLockState(bool lockState)
@@ -104,11 +98,10 @@ void printLockState(bool lockState)
 }
 
 void setup() {
-  // put your setup code here, to run once:
   pinMode(PIN_PB5, OUTPUT);
   lcd.setBacklightPin(3, POSITIVE);
   lcd.setBacklight(HIGH);
-  lcd.begin(16, 2); // Set up the lcd to have 16 char on 2 lines
+  lcd.begin(16, 2);
   lcd.createChar(0, lock00);
   lcd.createChar(1, lock01);
   lcd.createChar(2, lock10);
@@ -128,25 +121,24 @@ void setup() {
   printLockState(lockState);
   lcd.setCursor(0, 0);
   lcd.print("ID: ");
-//  OTP = "1";
   digitalWrite(PIN_PB5, HIGH);
   Serial.begin(9600);
-//  delay(1000);
-//  Serial.println("Device started...");
+  Serial.println("Device started...");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   key = keypad.getKey();
   if (!haveID)
   {
     if (key != NO_KEY && key != '#' && key != '*')
     {
-      thisID += key;
+      if (c < 10)
+        thisID[c++] = key;
     }
-    if (key == '#' && thisID.length() > 0)
+    if (key == '#')
     {
-      thisID = thisID.substring(0, thisID.length() - 1);
+      if (c >= 1)
+        thisID[--c] = '\0';
       lcd.clear();
     }
     if (key == '*')
@@ -155,9 +147,6 @@ void loop() {
       lcd.setCursor(0, 0);
       if (index(thisID) != -1)
       {
-//        OTP = String(random(1000,99999));
-//        OTP = getOTP();
-        strcpy(OTP,"1234");
         lcd.print("ID found");
         printLockState(lockState);
         lcd.clear();
@@ -167,6 +156,7 @@ void loop() {
         lcd.print(String(buffer).substring(0, 7));
         printLockState(lockState);
         haveID = true;
+        getOTP();
         Serial.println(OTP);
         delay(1000);
       }
@@ -176,12 +166,15 @@ void loop() {
         printLockState(lockState);
         delay(1000);
       }
-      thisID = "";
+      for (int i = 0; i < 11; i++)
+        thisID[i] = '\0';
+      c = 0;
       lcd.clear();
     }
     printLockState(lockState);
     lcd.setCursor(0, 0);
-    lcd.print("ID: " + thisID);
+    lcd.print("ID: ");
+    lcd.print(thisID);
     if (haveID)
       lcd.clear();
   }
@@ -189,19 +182,22 @@ void loop() {
   {
     if (key != NO_KEY && key != '#' && key != '*')
     {
-      thisPWD += key;
+      if (c < 9)
+        thisPWD[c++] = key;
     }
     if (key == '#')
     {
-      thisPWD = thisPWD.substring(0, thisPWD.length() - 1);
+      if (c >= 1)
+        thisPWD[--c] = '\0';
       lcd.clear();
     }
     if (key == '*')
     {
-      if (thisPWD == OTP)
+      Serial.println(strcmp(thisPWD, OTP));
+      if (strcmp(thisPWD, OTP) == 0)
       {
         lcd.clear();
-        lockState = not lockState;
+        lockState = !lockState;
         lcd.print("Success");
         if (lockState)
         {
@@ -224,7 +220,9 @@ void loop() {
         delay(1000);
         lcd.clear();
       }
-      thisPWD = "";
+      for (int i = 0; i < 11; i++)
+        thisPWD[i] = '\0';
+      c = 0;
     }
     printLockState(lockState);
     lcd.setCursor(0, 0);
